@@ -7,8 +7,8 @@
  *    Stuff that moves across the screen to be shot
  ************************************************************************/
 
-#include <cassert>
 #include "bird.h"
+#include "advance.h"
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
@@ -31,33 +31,6 @@
 #include <math.h>
 #define GLUT_TEXT GLUT_BITMAP_HELVETICA_12
 #endif // _WIN32
-
-
-/***************************************************************/
-/***************************************************************/
-/*                             MISC.                           */
-/***************************************************************/
-/***************************************************************/
-
-
-/******************************************************************
- * RANDOM
- * These functions generate a random number.
- ****************************************************************/
-int randomInt(int min, int max)
-{
-   assert(min < max);
-   int num = (rand() % (max - min)) + min;
-   assert(min <= num && num <= max);
-   return num;
-}
-double randomFloat(double min, double max)
-{
-   assert(min <= max);
-   double num = min + ((double)rand() / (double)RAND_MAX * (max - min));
-   assert(min <= num && num <= max);
-   return num;
-}
 
 /***************************************************************/
 /***************************************************************/
@@ -83,6 +56,8 @@ Standard::Standard(double radius, double speed, int points) : Bird()
 
    // set the size
    this->radius = radius;
+
+   advanceObject = new Inertia();
 }
 
 /******************************************************************
@@ -103,6 +78,8 @@ Floater::Floater(double radius, double speed, int points) : Bird()
 
    // set the size
    this->radius = radius;
+
+   advanceObject = new Buoyancy();
 }
 
 /******************************************************************
@@ -123,6 +100,8 @@ Sinker::Sinker(double radius, double speed, int points) : Bird()
 
    // set the size
    this->radius = radius;
+
+   advanceObject = new Gravity();
 }
 
 /******************************************************************
@@ -143,99 +122,8 @@ Crazy::Crazy(double radius, double speed, int points) : Bird()
 
    // set the size
    this->radius = radius;
-}
 
- /***************************************************************/
- /***************************************************************/
- /*                            ADVANCE                          */
- /***************************************************************/
- /***************************************************************/
-
-/*********************************************
- * STANDARD ADVANCE
- * How the standard bird moves - inertia and drag
- *********************************************/
-void Standard::advance()
-{
-   // small amount of drag
-   v *= 0.995;
-
-   // inertia
-   pt.add(v);
-
-   // out of bounds checker
-   if (isOutOfBounds())
-   {
-      kill();
-      points *= -1; // points go negative when it is missed!
-   }
-}
-
-/*********************************************
- * FLOATER ADVANCE
- * How the floating bird moves: strong drag and anti-gravity
- *********************************************/
-void Floater::advance()
-{
-   // large amount of drag
-   v *= 0.990;
-
-   // inertia
-   pt.add(v);
-
-   // anti-gravity
-   v.addDy(0.05);
-
-   // out of bounds checker
-   if (isOutOfBounds())
-   {
-      kill();
-      points *= -1; // points go negative when it is missed!
-   }
-}
-
-/*********************************************
- * CRAZY ADVANCE
- * How the crazy bird moves, every half a second it changes direciton
- *********************************************/
-void Crazy::advance()
-{
-   // erratic turns eery half a second or so
-   if (randomInt(0, 15) == 0)
-   {
-      v.addDy(randomFloat(-1.5, 1.5));
-      v.addDx(randomFloat(-1.5, 1.5));
-   }
-
-   // inertia
-   pt.add(v);
-
-   // out of bounds checker
-   if (isOutOfBounds())
-   {
-      kill();
-      points *= -1; // points go negative when it is missed!
-   }
-}
-
-/*********************************************
- * SINKER ADVANCE
- * How the sinker bird moves, no drag but gravity
- *********************************************/
-void Sinker::advance()
-{
-   // gravity
-   v.addDy(-0.07);
-
-   // inertia
-   pt.add(v);
-
-   // out of bounds checker
-   if (isOutOfBounds())
-   {
-      kill();
-      points *= -1; // points go negative when it is missed!
-   }
+   advanceObject = new Chaos();
 }
 
 /***************************************************************/
@@ -336,4 +224,8 @@ void Sinker::draw()
       drawDisk(pt, radius - 0.0, 0.0, 0.0, 0.8);
       drawDisk(pt, radius - 4.0, 0.0, 0.0, 0.0);
    }
+}
+
+void Bird::advance() {
+   advanceObject->advance(*this, points);
 }
